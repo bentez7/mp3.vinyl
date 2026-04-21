@@ -19,7 +19,7 @@
   --window-bg: #ededed;
   --window-chrome: linear-gradient(#f6f6f6 0%, #d1d1d1 100%);
   --window-chrome-inactive: linear-gradient(#f3f3f3 0%, #e0e0e0 100%);
-  --border: #999 ;
+  --border: #999;
   --border-dark: #6a6a6a;
   --text: #1a1a1a;
   --text-dim: #666;
@@ -459,6 +459,32 @@ body {
   transition: right 0.35s ease-out;
 }
 .product-sleeve::after { transition: right 0.35s ease-out; }
+
+/* sleeve content — REAL PHOTO variant */
+.sleeve-photo {
+  width: 100%;
+  height: 100%;
+  background-color: #f3f3f3;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* "NEW" tag overlay */
+.new-tag {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  background: var(--red);
+  color: white;
+  font-family: 'Pixelify Sans', monospace;
+  font-weight: 700;
+  font-size: 9px;
+  padding: 2px 6px;
+  letter-spacing: 0.08em;
+  z-index: 5;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
 
 /* sleeve content — MP3 file icon styled */
 .sleeve-file {
@@ -1068,13 +1094,15 @@ body {
     <!-- toolbar -->
     <div class="shop-toolbar">
       <div class="nav-arrows">
-        <button disabled title="Back">◀</button>
-        <button disabled title="Forward">▶</button>
+        <button id="prevPage" title="Previous page">◀</button>
+        <button id="nextPage" title="Next page">▶</button>
       </div>
       <div class="breadcrumb">
         <span>shop</span>
         <span class="sep">›</span>
         <span class="current" id="currentCat">all</span>
+        <span class="sep" id="pageSep" style="display:none">·</span>
+        <span class="current" id="pageInfo" style="display:none">page 1</span>
       </div>
       <input class="search-field" type="text" placeholder="Search" id="searchInput">
       <a href="https://instagram.com/mp3.vinyl" target="_blank" rel="noopener" class="cart-btn">
@@ -1088,8 +1116,10 @@ body {
       <button class="category-pill" data-cat="hiphop">Hip-Hop</button>
       <button class="category-pill" data-cat="rnb">R&amp;B</button>
       <button class="category-pill" data-cat="indie">Indie</button>
-      <button class="category-pill" data-cat="new">New Arrivals</button>
-      <button class="category-pill" data-cat="soldout">Sold Out</button>
+      <button class="category-pill" data-cat="jazz">Jazz</button>
+      <button class="category-pill" data-cat="citypop">City Pop</button>
+      <button class="category-pill" data-cat="electronic">Electronic</button>
+      <button class="category-pill" data-cat="new">New / Pre-order</button>
     </div>
 
     <!-- products -->
@@ -1208,7 +1238,7 @@ body {
     <a href="#sourcing" class="dock-item" data-label="Sourcing" style="font-size: 30px;">🔍</a>
     <div class="dock-divider"></div>
     <a href="https://instagram.com/mp3.vinyl" target="_blank" rel="noopener" class="dock-item" data-label="Instagram" style="font-size: 30px;">📷</a>
-    <a href="https://xhslink.com/m/8NPjXELynQ1" target="_blank" rel="noopener" class="dock-item" data-label="Xiaohongshu" style="font-size: 30px;">📕</a>
+    <a href="https://xhslink.com/m/9hCRxHQM8yo" target="_blank" rel="noopener" class="dock-item" data-label="Xiaohongshu" style="font-size: 30px;">📕</a>
     <a href="mailto:hello@mp3vinyl.com" class="dock-item" data-label="Mail" style="font-size: 30px;">✉️</a>
   </div>
 </div>
@@ -1241,118 +1271,140 @@ body {
 /* ============================================
    DATA — records (edit these to update the shop)
    ============================================ */
-const records = [
-  { id:'001', artist:'SZA', title:'SOS', cat:'rnb', tint:1, format:'2LP', year:'2022', soldout:false, new:false },
-  { id:'002', artist:'Tyler, The Creator', title:'Chromakopia', cat:'hiphop', tint:3, format:'LP', year:'2024', soldout:false, new:true },
-  { id:'003', artist:'Frank Ocean', title:'Blonde', cat:'rnb', tint:5, format:'2LP', year:'2016', soldout:false, new:false },
-  { id:'004', artist:'Baby Keem', title:'The Melodic Blue', cat:'hiphop', tint:8, format:'2LP', year:'2021', soldout:false, new:false },
-  { id:'005', artist:"A$AP Rocky", title:"Don't Be Dumb", cat:'hiphop', tint:6, format:'LP', year:'2025', soldout:false, new:true, advisory:true },
-  { id:'006', artist:'Denzel Curry', title:'Melt My Eyez', cat:'hiphop', tint:4, format:'2LP', year:'2022', soldout:true, new:false, advisory:true },
-  { id:'007', artist:'Kendrick Lamar', title:'DAMN.', cat:'hiphop', tint:4, format:'2LP', year:'2017', soldout:false, new:false, advisory:true },
-  { id:'008', artist:'The Weeknd', title:'After Hours', cat:'rnb', tint:4, format:'2LP', year:'2020', soldout:false, new:false },
-  { id:'009', artist:'Steve Lacy', title:'Gemini Rights', cat:'indie', tint:7, format:'LP', year:'2022', soldout:false, new:true },
-];
-
 /* ============================================
-   LIVE CLOCK in menu bar
+   CATALOG — loaded async from catalog.json
+   Each record uses short keys to keep file small:
+     a=artist, t=title, c=category, i=imageUrl, y=year, p=preorder/new
    ============================================ */
-function updateClock() {
-  const now = new Date();
-  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const day = days[now.getDay()];
-  const date = now.getDate();
-  const month = months[now.getMonth()];
-  let hours = now.getHours();
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12 || 12;
-  document.getElementById('datetime').textContent =
-    `${day}, ${month} ${date}  ${hours}:${minutes} ${ampm}`;
-}
-updateClock();
-setInterval(updateClock, 1000 * 30);
+let records = [];
+let filtered = [];
+let currentFilter = 'all';
+let currentSearch = '';
+let currentPage = 0;
+const PAGE_SIZE = 24;
 
-/* ============================================
-   RENDER shop grid
-   ============================================ */
+const grid = document.getElementById('shopGrid');
+const itemCount = document.getElementById('itemCount');
+const pageInfo = document.getElementById('pageInfo');
+const pageSep = document.getElementById('pageSep');
+const prevBtn = document.getElementById('prevPage');
+const nextBtn = document.getElementById('nextPage');
+
+function escapeHtml(s){ return String(s).replace(/[&<>"\']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"\'":'&#39;'}[c])); }
+
 function buildProduct(r) {
   const a = document.createElement('a');
   a.href = '#';
   a.className = 'product';
-  a.dataset.id = r.id;
-  a.dataset.cat = r.cat;
-  a.dataset.new = r.new ? '1' : '0';
-  a.dataset.soldout = r.soldout ? '1' : '0';
-
   a.innerHTML = `
     <div class="product-sleeve">
       <div class="product-sleeve-inner">
-        <div class="sleeve-file tint-${r.tint}">
-          <div class="sleeve-file-note">♪</div>
-          <div class="sleeve-file-title">${escapeHtml(r.title).toUpperCase()}</div>
-          ${r.advisory ? '<div class="advisory">PARENTAL<br>ADVISORY</div>' : ''}
-        </div>
-        ${r.soldout ? '<div class="sold-out"><span>SOLD OUT</span></div>' : ''}
+        <div class="sleeve-photo" style="background-image:url('${escapeHtml(r.i)}')"></div>
+        ${r.p ? '<div class="new-tag">PRE-ORDER</div>' : (r._new ? '<div class="new-tag">NEW</div>' : '')}
       </div>
     </div>
-    <div class="product-name">${escapeHtml(r.artist)} — <em>${escapeHtml(r.title)}</em></div>
-    <div class="product-price">${r.soldout ? '—' : 'DM for price'}</div>
+    <div class="product-name">${escapeHtml(r.a)} — <em>${escapeHtml(r.t)}</em></div>
+    <div class="product-price">DM for price</div>
   `;
-
-  a.addEventListener('click', (e) => {
-    e.preventDefault();
-    openQuicklook(r);
-  });
+  a.addEventListener('click', (e) => { e.preventDefault(); openQuicklook(r); });
   return a;
 }
 
-function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function applyFilters() {
+  filtered = records.filter(r => {
+    if (currentFilter === 'all') {/* keep */}
+    else if (currentFilter === 'new' && !r.p) return false;
+    else if (['hiphop','rnb','indie','jazz','citypop','electronic'].includes(currentFilter) && r.c !== currentFilter) return false;
 
-const grid = document.getElementById('shopGrid');
-function renderGrid(filter = 'all', search = '') {
-  grid.innerHTML = '';
-  const filtered = records.filter(r => {
-    if (filter === 'all') {/* keep */}
-    else if (filter === 'new' && !r.new) return false;
-    else if (filter === 'soldout' && !r.soldout) return false;
-    else if (['hiphop','rnb','indie'].includes(filter) && r.cat !== filter) return false;
-
-    if (search) {
-      const q = search.toLowerCase();
-      if (!r.artist.toLowerCase().includes(q) && !r.title.toLowerCase().includes(q)) return false;
+    if (currentSearch) {
+      const q = currentSearch.toLowerCase();
+      if (!r.a.toLowerCase().includes(q) && !r.t.toLowerCase().includes(q)) return false;
     }
     return true;
   });
-  filtered.forEach(r => grid.appendChild(buildProduct(r)));
-  document.getElementById('itemCount').textContent = `${filtered.length} item${filtered.length !== 1 ? 's' : ''}`;
+  currentPage = 0;
+  renderPage();
+}
+
+function renderPage() {
+  grid.innerHTML = '';
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const start = currentPage * PAGE_SIZE;
+  const slice = filtered.slice(start, start + PAGE_SIZE);
+
   if (filtered.length === 0) {
     const empty = document.createElement('div');
     empty.style.cssText = 'grid-column:1/-1; text-align:center; padding:60px 20px; color:#999; font-family:Pixelify Sans, monospace;';
-    empty.innerHTML = '📭<br><br>Nothing here yet.<br><small style="font-size:12px;color:#aaa">Try another category or DM us for requests.</small>';
+    empty.innerHTML = '📭<br><br>Nothing here yet.<br><small style="font-size:12px;color:#aaa">Try another category or search, or DM us for sourcing requests.</small>';
     grid.appendChild(empty);
+  } else {
+    slice.forEach(r => grid.appendChild(buildProduct(r)));
   }
-}
-renderGrid();
 
-/* Category pills */
+  itemCount.textContent = `${filtered.length.toLocaleString()} item${filtered.length !== 1 ? 's' : ''}`;
+  if (totalPages > 1) {
+    pageInfo.style.display = '';
+    pageSep.style.display = '';
+    pageInfo.textContent = `page ${currentPage + 1} of ${totalPages}`;
+  } else {
+    pageInfo.style.display = 'none';
+    pageSep.style.display = 'none';
+  }
+  prevBtn.disabled = currentPage === 0;
+  nextBtn.disabled = currentPage >= totalPages - 1;
+
+  window.scrollTo({ top: document.querySelector('.shop-window').offsetTop - 60, behavior: 'smooth' });
+}
+
+prevBtn.addEventListener('click', () => { if (currentPage > 0) { currentPage--; renderPage(); } });
+nextBtn.addEventListener('click', () => {
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  if (currentPage < totalPages - 1) { currentPage++; renderPage(); }
+});
+
+grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:#666; font-family:Pixelify Sans, monospace;">
+  ⏳ Loading catalog...<br>
+  <small style="font-size:11px;color:#aaa">Pulling 6,000+ records, give us a sec.</small>
+</div>`;
+
+fetch('./catalog.json')
+  .then(r => {
+    if (!r.ok) throw new Error('Could not load catalog.json');
+    return r.json();
+  })
+  .then(data => {
+    records = data;
+    records.forEach((r, idx) => {
+      r.id = String(idx + 1).padStart(5, '0');
+      const h = parseInt(r.id, 10);
+      r._new = (h % 33 === 0);
+    });
+    applyFilters();
+  })
+  .catch(err => {
+    grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:#c00; font-family:Pixelify Sans, monospace;">
+      ⚠️ Couldn\'t load the catalog.<br>
+      <small style="font-size:11px;color:#666">${escapeHtml(err.message)}<br>Make sure catalog.json is in the same folder as index.html.</small>
+    </div>`;
+  });
+
 document.querySelectorAll('.category-pill').forEach(pill => {
   pill.addEventListener('click', () => {
     document.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
     pill.classList.add('active');
     document.getElementById('currentCat').textContent = pill.textContent.toLowerCase();
-    renderGrid(pill.dataset.cat, document.getElementById('searchInput').value);
+    currentFilter = pill.dataset.cat;
+    applyFilters();
   });
 });
 
-/* Search */
 let searchTimer;
 document.getElementById('searchInput').addEventListener('input', (e) => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
-    const active = document.querySelector('.category-pill.active');
-    renderGrid(active ? active.dataset.cat : 'all', e.target.value);
-  }, 150);
+    currentSearch = e.target.value;
+    applyFilters();
+  }, 200);
 });
 
 /* ============================================
@@ -1360,21 +1412,17 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
    ============================================ */
 const ql = document.getElementById('quicklook');
 function openQuicklook(r) {
-  document.getElementById('qlTitle').textContent = `${r.artist} — ${r.title}.quicklook`;
-  document.getElementById('qlName').innerHTML = `<em>${escapeHtml(r.title)}</em>`;
-  document.getElementById('qlArtist').textContent = r.artist;
-  document.getElementById('qlFormat').textContent = r.format;
+  document.getElementById('qlTitle').textContent = `${r.a} — ${r.t}.quicklook`;
+  document.getElementById('qlName').innerHTML = `<em>${escapeHtml(r.t)}</em>`;
+  document.getElementById('qlArtist').textContent = r.a;
+  document.getElementById('qlFormat').textContent = 'LP';
   document.getElementById('qlCat').textContent = `MP3 / ${r.id}`;
-  document.getElementById('qlYear').textContent = r.year;
+  document.getElementById('qlYear').textContent = r.y || '';
+
   document.getElementById('qlSleeve').innerHTML = `
     <div class="product-sleeve" style="width:180px;height:180px;">
       <div class="product-sleeve-inner" style="width:155px;height:155px;">
-        <div class="sleeve-file tint-${r.tint}">
-          <div class="sleeve-file-note" style="font-size:68px;">♪</div>
-          <div class="sleeve-file-title" style="font-size:14px;">${escapeHtml(r.title).toUpperCase()}</div>
-          ${r.advisory ? '<div class="advisory" style="font-size:7px;">PARENTAL<br>ADVISORY</div>' : ''}
-        </div>
-        ${r.soldout ? '<div class="sold-out"><span>SOLD OUT</span></div>' : ''}
+        <div class="sleeve-photo" style="background-image:url('${escapeHtml(r.i)}')"></div>
       </div>
     </div>
   `;
@@ -1385,6 +1433,7 @@ document.getElementById('qlClose').addEventListener('click', closeQuicklook);
 document.getElementById('qlClose2').addEventListener('click', (e)=>{ e.preventDefault(); closeQuicklook(); });
 ql.addEventListener('click', (e) => { if (e.target === ql) closeQuicklook(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeQuicklook(); });
+
 
 /* ============================================
    Traffic light close → cheeky reload effect
